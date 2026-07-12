@@ -40,6 +40,7 @@
   .card h3{font-size:13px;color:var(--mut);font-weight:600;margin-bottom:12px}
 
   #treemap{width:100%;height:300px}
+  .chart-box{position:relative;height:240px;width:100%}
   .tm-label{font-size:11px;fill:#fff;font-weight:700;pointer-events:none}
   .tm-sub{font-size:10px;fill:rgba(255,255,255,.8);pointer-events:none}
   .tm-sector{font-size:10px;fill:var(--mut);font-weight:600}
@@ -121,7 +122,7 @@
         <button data-r="1m">1달</button>
         <button data-r="6m">6달</button>
       </div>
-      <canvas id="trend" height="110"></canvas>
+      <div class="chart-box"><canvas id="trend"></canvas></div>
       <div class="note" id="trendNote"></div>
     </div>
 
@@ -445,7 +446,7 @@ function drawSavings () {
 }
 
 boot();
-window.addEventListener('resize', () => { if (P) drawTreemap(assets()); });
+window.addEventListener('resize', () => { if (P && Q) drawTreemap(assets()); });
 </script>
 </body>
 </html>
