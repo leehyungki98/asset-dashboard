@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>내 자산</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js"></script>
+<style>
+  :root{
+    --bg:#0d1014; --card:#171b23; --line:#252a34;
+    --tx:#e8eaed; --mut:#8b95a1; --dim:#5c6570;
+    --up:#f45b5b; --down:#2fc39a; --flat:#6b7684;
+    --accent:#f5a623;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--tx);
+       font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",sans-serif;
+       padding:20px;font-size:14px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:900px;margin:0 auto}
+
+  .tabs{display:flex;gap:8px;margin-bottom:6px}
+  .tab{padding:8px 18px;border-radius:20px;background:var(--card);color:var(--mut);
+       cursor:pointer;font-weight:600;font-size:13px;border:1px solid transparent;transition:.15s}
+  .tab.on{background:var(--accent);color:#111;border-color:var(--accent)}
+  .stamp{color:var(--dim);font-size:11px;text-align:right;margin-bottom:18px}
+
+  .hero{margin-bottom:22px}
+  .hero .lbl{color:var(--mut);font-size:13px;margin-bottom:4px}
+  .hero .big{font-size:34px;font-weight:700;letter-spacing:-.5px}
+  .hero .sub{font-size:14px;margin-top:4px;font-weight:600}
+
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+        border-radius:10px;overflow:hidden;margin-bottom:22px}
+  .kpi{background:var(--card);padding:14px 16px}
+  .kpi .k{color:var(--mut);font-size:11px;margin-bottom:5px}
+  .kpi .v{font-size:17px;font-weight:700}
+
+  .card{background:var(--card);border-radius:12px;padding:16px;margin-bottom:16px}
+  .card h3{font-size:13px;color:var(--mut);font-weight:600;margin-bottom:12px}
+
+  #treemap{width:100%;height:300px}
+  .tm-label{font-size:11px;fill:#fff;font-weight:700;pointer-events:none}
+  .tm-sub{font-size:10px;fill:rgba(255,255,255,.8);pointer-events:none}
+  .tm-sector{font-size:10px;fill:var(--mut);font-weight:600}
+
+  .donut-row{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+  .donut-box{width:220px;height:220px;flex:none}
+  .legend{flex:1;min-width:220px;display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+  .lg{display:flex;align-items:center;gap:7px;font-size:12px}
+  .lg i{width:9px;height:9px;border-radius:2px;flex:none}
+  .lg .n{color:var(--mut);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lg .p{font-weight:700}
+
+  .seg{display:flex;gap:6px;margin-bottom:12px}
+  .seg button{padding:5px 13px;border-radius:14px;border:none;background:#222833;color:var(--mut);
+              cursor:pointer;font-size:12px;font-weight:600}
+  .seg button.on{background:#333c4a;color:var(--tx)}
+
+  .row{border-top:1px solid var(--line);padding:14px 2px}
+  .row:first-of-type{border-top:none}
+  .row .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+  .row .nm{font-weight:700;font-size:15px;color:var(--accent)}
+  .row .sc{color:var(--dim);font-size:11px;margin-left:6px;font-weight:400}
+  .row .qty{color:var(--mut);font-size:12px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:5px 20px;font-size:12px}
+  .f{display:flex;justify-content:space-between}
+  .f .k{color:var(--dim)}
+  .f .v{font-weight:600}
+
+  .bar{height:6px;background:#222833;border-radius:3px;overflow:hidden;margin:8px 0 5px}
+  .bar i{display:block;height:100%;background:var(--accent)}
+  .barmeta{display:flex;justify-content:space-between;color:var(--dim);font-size:11px}
+
+  .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--flat)}
+  .note{color:var(--dim);font-size:11px;margin-top:8px;text-align:center}
+  .err{background:#2a1a1a;border:1px solid #5a2a2a;color:#f4a0a0;padding:14px;border-radius:10px}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="tabs">
+    <div class="tab on" data-scope="invest">투자자산</div>
+    <div class="tab"      data-scope="total">총자산</div>
+  </div>
+  <div class="stamp" id="stamp">불러오는 중…</div>
+
+  <div id="err" class="err hide"></div>
+
+  <div id="app" class="hide">
+    <div class="hero">
+      <div class="lbl" id="heroLbl">총 자산</div>
+      <div class="big" id="heroVal">–</div>
+      <div class="sub" id="heroSub">–</div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="k">연간 총 배당금</div><div class="v" id="kDivAmt">–</div></div>
+      <div class="kpi"><div class="k">투자 배당률</div>  <div class="v" id="kDivCost">–</div></div>
+      <div class="kpi"><div class="k">시가 배당률</div>  <div class="v" id="kDivMkt">–</div></div>
+    </div>
+
+    <div class="card">
+      <h3>히트맵</h3>
+      <svg id="treemap"></svg>
+    </div>
+
+    <div class="card">
+      <h3>자산 구성</h3>
+      <div class="donut-row">
+        <div class="donut-box"><canvas id="donut"></canvas></div>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>추이</h3>
+      <div class="seg" id="range">
+        <button data-r="ytd" class="on">올해</button>
+        <button data-r="1m">1달</button>
+        <button data-r="6m">6달</button>
+      </div>
+      <canvas id="trend" height="110"></canvas>
+      <div class="note" id="trendNote"></div>
+    </div>
+
+    <div class="card">
+      <h3>자산</h3>
+      <div class="seg" id="filter">
+        <button data-f="all" class="on">전체</button>
+        <button data-f="미국">미국</button>
+        <button data-f="한국">한국</button>
+        <button data-f="현금">현금자산</button>
+      </div>
+      <div id="list"></div>
+    </div>
+
+    <div class="card hide" id="savingsCard">
+      <h3>적금 진행률</h3>
+      <div id="savingsBars"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const won  = n => '₩' + Math.round(n).toLocaleString('ko-KR');
+const pct  = n => (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
+const cls  = n => n > 0 ? 'up' : n < 0 ? 'down' : 'flat';
+const PALETTE = ['#12b886','#1c7ed6','#4c6ef5','#e8590c','#f59f00','#868e96','#495057','#adb5bd'];
+
+let P, Q, H, scope = 'invest', range = 'ytd', filter = 'all';
+
+// #c=<base64url(JSON)> 을 읽어 보유/적금 설정으로 복원한다.
+// 해시는 브라우저가 서버로 보내지 않으므로 GitHub Pages 는 이 값을 볼 수 없다.
+function readConfig () {
+  const m = location.hash.match(/c=([^&]+)/);
+  if (!m) throw new Error('설정이 없습니다');
+  const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+  const bin = atob(b64);
+  const json = new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+  const c = JSON.parse(json);
+  return {
+    holdings: c.h.map(([ticker, name, sector, region, qty, avgPrice, currency]) =>
+      ({ ticker, name, sector, region, qty, avgPrice, currency })),
+    savings: c.s.map(([name, balance, start, maturity]) =>
+      ({ name, balance, start, maturity }))
+  };
+}
+let donutChart, trendChart;
+
+async function boot () {
+  try {
+    P = readConfig();          // 보유 데이터는 URL 해시에만 있다 (서버로 전송되지 않음)
+    const [q, h] = await Promise.all([
+      fetch('data/prices.json').then(r => { if (!r.ok) throw new Error('prices.json 없음'); return r.json(); }),
+      fetch('data/history.json').then(r => r.ok ? r.json() : null).catch(() => null)
+    ]);
+    Q = q; H = h;
+  } catch (e) {
+    document.getElementById('stamp').textContent = '';
+    const el = document.getElementById('err');
+    el.classList.remove('hide');
+    el.innerHTML = '<b>' + e.message + '</b><br><br>' +
+      'URL 끝에 <code>#c=…</code> 설정이 붙어 있어야 합니다. ' +
+      '시세가 안 뜨면 GitHub Actions의 <code>update prices</code> 워크플로를 한 번 실행하세요.';
+    return;
+  }
+  document.getElementById('app').classList.remove('hide');
+  document.getElementById('stamp').textContent =
+    '최종 갱신 ' + Q.updated.replace('T', ' ').slice(0, 16) + ' · 환율 ' + Q.fx.toLocaleString('ko-KR') + '원 · 최대 30분 지연';
+
+  document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+    t.classList.add('on'); scope = t.dataset.scope; render();
+  });
+  document.querySelectorAll('#range button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('#range button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); range = b.dataset.r; drawTrend();
+  });
+  document.querySelectorAll('#filter button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('#filter button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); filter = b.dataset.f; drawList();
+  });
+  render();
+}
+
+// 보유종목 + (총자산 탭이면) 적금을 하나의 자산 배열로 정규화
+function assets () {
+  const fx = t => t === 'USD' ? Q.fx : 1;
+  const stocks = P.holdings.map(h => {
+    const q = Q.quotes[h.ticker], r = fx(h.currency);
+    const value = Math.round(h.qty * q.price * r);      // 항목별 반올림 후 합산 (미래에셋과 동일)
+    const cost  = Math.round(h.qty * h.avgPrice * r);
+    const divPer = (q.annualDividend || 0) * r;
+    return {
+      ...h, price: q.price, changePct: q.changePct, cash: false,
+      value, cost, pnl: value - cost, ret: (value - cost) / cost * 100,
+      divMonths: q.dividendMonths || [], divTotal: divPer * h.qty,
+      divYieldCost: cost ? divPer * h.qty / cost * 100 : 0
+    };
+  });
+  if (scope === 'invest') return stocks;
+  const cash = P.savings.map(s => ({
+    ticker: s.name, name: s.name, sector: '현금', region: '현금', cash: true,
+    qty: 1, price: s.balance, avgPrice: s.balance, changePct: 0,
+    value: s.balance, cost: s.balance, pnl: 0, ret: 0,
+    divMonths: [], divTotal: 0, divYieldCost: 0,
+    start: s.start, maturity: s.maturity
+  }));
+  return [...stocks, ...cash];
+}
+
+function render () {
+  const A = assets();
+  const value = A.reduce((s, a) => s + a.value, 0);
+  const cost  = A.reduce((s, a) => s + a.cost, 0);
+  const pnl   = value - cost;
+  const divs  = A.reduce((s, a) => s + a.divTotal, 0);
+  // 수익률/배당률의 분모는 언제나 '투자 원금'이다.
+  // 적금까지 분모에 넣으면 총자산 탭에서 +41.99% 가 +3.49% 로 희석되어 의미가 사라진다.
+  const investCost = A.filter(a => !a.cash).reduce((s, a) => s + a.cost, 0);
+
+  document.getElementById('heroLbl').textContent = scope === 'invest' ? '투자 자산' : '총 자산';
+  document.getElementById('heroVal').textContent = won(value);
+  const sub = document.getElementById('heroSub');
+  sub.textContent = '총 수익  ' + (pnl >= 0 ? '+' : '−') + won(Math.abs(pnl)) + ' (' + pct(investCost ? pnl / investCost * 100 : 0) + ')';
+  sub.className = 'sub ' + cls(pnl);
+
+  document.getElementById('kDivAmt').textContent  = won(divs);
+  document.getElementById('kDivCost').textContent = (investCost ? (divs / investCost * 100) : 0).toFixed(2) + '%';
+  document.getElementById('kDivMkt').textContent  = (value ? (divs / value * 100) : 0).toFixed(2) + '%';
+
+  document.getElementById('savingsCard').classList.toggle('hide', scope !== 'total');
+  if (scope === 'total') drawSavings();
+
+  drawTreemap(A); drawDonut(A); drawTrend(); drawList();
+}
+
+// ── 히트맵 (면적=평가금액, 색=등락률) ────────────────────────────
+function drawTreemap (A) {
+  const svg = d3.select('#treemap');
+  svg.selectAll('*').remove();
+  const W = svg.node().clientWidth, Hh = 300;
+  svg.attr('viewBox', `0 0 ${W} ${Hh}`);
+
+  const groups = d3.group(A, a => a.sector);
+  const root = d3.hierarchy({ children: [...groups].map(([k, v]) => ({ name: k, children: v })) })
+                 .sum(d => d.value).sort((a, b) => b.value - a.value);
+  d3.treemap().size([W, Hh]).paddingTop(16).paddingInner(2).round(true)(root);
+
+  const heat = c => {
+    if (!isFinite(c) || c === 0) return '#3a4149';
+    const t = Math.min(Math.abs(c) / 5, 1);              // ±5% 에서 최대 채도
+    return c > 0 ? d3.interpolateRgb('#5a2b30', '#e0333f')(t)
+                 : d3.interpolateRgb('#22463f', '#12b886')(t);
+  };
+
+  svg.selectAll('.sector').data(root.children).join('text')
+     .attr('class', 'tm-sector').attr('x', d => d.x0 + 3).attr('y', d => d.y0 + 11)
+     .text(d => d.data.name);
+
+  const leaf = svg.selectAll('.leaf').data(root.leaves()).join('g')
+     .attr('transform', d => `translate(${d.x0},${d.y0})`);
+  leaf.append('rect')
+      .attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0)
+      .attr('fill', d => heat(d.data.changePct)).attr('rx', 2);
+  leaf.append('title')
+      .text(d => `${d.data.name}\n${won(d.data.value)}\n${d.data.cash ? '' : pct(d.data.changePct)}`);
+  leaf.filter(d => (d.x1 - d.x0) > 55 && (d.y1 - d.y0) > 34)
+      .each(function (d) {
+        const g = d3.select(this);
+        g.append('text').attr('class', 'tm-label').attr('x', 6).attr('y', 16)
+         .text(d.data.name.length > 12 ? d.data.name.slice(0, 11) + '…' : d.data.name);
+        if (!d.data.cash)
+          g.append('text').attr('class', 'tm-label').attr('x', 6).attr('y', 32)
+           .style('font-size', '13px').text(pct(d.data.changePct));
+        g.append('text').attr('class', 'tm-sub').attr('x', 6)
+         .attr('y', d.data.cash ? 32 : 46).text(won(d.data.value));
+      });
+}
+
+// ── 도넛 ────────────────────────────────────────────────────────
+function drawDonut (A) {
+  const S = [...A].sort((a, b) => b.value - a.value);
+  const total = S.reduce((s, a) => s + a.value, 0);
+  const colors = S.map((_, i) => PALETTE[i % PALETTE.length]);
+
+  donutChart?.destroy();
+  donutChart = new Chart(document.getElementById('donut'), {
+    type: 'doughnut',
+    data: { labels: S.map(a => a.name), datasets: [{ data: S.map(a => a.value), backgroundColor: colors, borderWidth: 0 }] },
+    options: {
+      cutout: '62%', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ` ${c.label}  ${won(c.raw)}  (${(c.raw / total * 100).toFixed(1)}%)` } }
+      }
+    }
+  });
+
+  document.getElementById('legend').innerHTML = S.map((a, i) =>
+    `<div class="lg"><i style="background:${colors[i]}"></i>
+       <span class="n">${a.name}</span>
+       <span class="p">${(a.value / total * 100).toFixed(1)}%</span></div>`).join('');
+}
+
+// ── 추이 ────────────────────────────────────────────────────────
+function drawTrend () {
+  const note = document.getElementById('trendNote');
+  trendChart?.destroy();
+  const canvas = document.getElementById('trend');
+
+  if (!H || !H.dates || H.dates.length < 2) {
+    note.textContent = '시세 이력이 없습니다. update prices 워크플로를 실행하세요.';
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+
+  const now = new Date();
+  const from = range === 'ytd' ? new Date(now.getFullYear(), 0, 1)
+             : range === '1m'  ? new Date(now - 30  * 864e5)
+                               : new Date(now - 182 * 864e5);
+  const idx = H.dates.map((d, i) => [d, i]).filter(([d]) => new Date(d) >= from).map(([, i]) => i);
+  if (idx.length < 2) { note.textContent = '해당 기간에 데이터가 없습니다.'; return; }
+
+  const savingsTotal = scope === 'invest' ? 0 : P.savings.reduce((s, x) => s + x.balance, 0);
+
+  const value = idx.map(i => savingsTotal + P.holdings.reduce((s, h2) => {
+    const c = H.close[h2.ticker]?.[i];
+    if (c == null) return s;
+    return s + h2.qty * c * (h2.currency === 'USD' ? H.fx[i] : 1);
+  }, 0));
+
+  const principal = idx.map(i => savingsTotal + P.holdings.reduce((s, h2) =>
+    s + h2.qty * h2.avgPrice * (h2.currency === 'USD' ? H.fx[i] : 1), 0));
+
+  note.textContent = '※ 현재 보유수량(' + P.holdings.map(h2 => h2.qty).join('/') +
+    ')을 과거에도 그대로 들고 있었다고 가정한 곡선입니다. 실제 매매 이력이 반영되지 않아 원금선이 거의 평평합니다. ' +
+    '미래에셋 거래내역을 넣으면 실제 곡선으로 바뀝니다.';
+
+  trendChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: idx.map(i => H.dates[i].slice(5)),
+      datasets: [
+        { label: '자산', data: value, borderColor: '#f45b5b', backgroundColor: 'rgba(244,91,91,.10)',
+          fill: true, tension: .2, pointRadius: 0, borderWidth: 2 },
+        { label: '원금(추정)', data: principal, borderColor: '#6b7684', borderDash: [4, 3],
+          fill: false, tension: .2, pointRadius: 0, borderWidth: 1.5 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#8b95a1', boxWidth: 10, font: { size: 11 } } },
+        tooltip: { callbacks: { label: c => ' ' + c.dataset.label + '  ' + won(c.raw) } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#5c6570', maxTicksLimit: 6, font: { size: 10 } } },
+        y: { grid: { color: '#1e232b' }, ticks: { color: '#5c6570', font: { size: 10 },
+             callback: v => (v / 1e4).toFixed(0) + '만' } }
+      }
+    }
+  });
+}
+
+// ── 자산 리스트 ──────────────────────────────────────────────────
+function drawList () {
+  const A = assets()
+    .filter(a => filter === 'all' ? true : a.region === filter)
+    .sort((a, b) => b.value - a.value);
+
+  document.getElementById('list').innerHTML = A.map(a => {
+    if (a.cash) return `
+      <div class="row">
+        <div class="top"><div><span class="nm">${a.name}</span><span class="sc">현금</span></div></div>
+        <div class="grid2">
+          <div class="f"><span class="k">자산가치</span><span class="v">${won(a.value)}</span></div>
+          <div class="f"><span class="k">수익</span><span class="v flat">–</span></div>
+        </div>
+      </div>`;
+    const cur = a.currency === 'USD' ? '$' : '₩';
+    const fmt = v => cur + (a.currency === 'USD' ? v.toFixed(2) : Math.round(v).toLocaleString('ko-KR'));
+    return `
+      <div class="row">
+        <div class="top">
+          <div><span class="nm">${a.name}</span><span class="sc">${a.sector}</span></div>
+          <div class="qty">수량 ${a.qty}</div>
+        </div>
+        <div class="grid2">
+          <div class="f"><span class="k">자산가치</span><span class="v">${won(a.value)}</span></div>
+          <div class="f"><span class="k">구매가</span><span class="v">${fmt(a.avgPrice)}</span></div>
+          <div class="f"><span class="k">수익</span>
+            <span class="v ${cls(a.pnl)}">${a.pnl >= 0 ? '+' : '−'}${won(Math.abs(a.pnl))} (${pct(a.ret)})</span></div>
+          <div class="f"><span class="k">현재가</span>
+            <span class="v">${fmt(a.price)} <span class="${cls(a.changePct)}">(${pct(a.changePct)})</span></span></div>
+          <div class="f"><span class="k">배당월</span>
+            <span class="v">${a.divMonths.length ? a.divMonths.join(', ') : '–'}</span></div>
+          <div class="f"><span class="k">투자배당률</span>
+            <span class="v">${a.divYieldCost ? a.divYieldCost.toFixed(2) + '% (' + won(a.divTotal) + ')' : '–'}</span></div>
+        </div>
+      </div>`;
+  }).join('') || '<div class="note">해당 자산이 없습니다.</div>';
+}
+
+// ── 적금 진행률 ──────────────────────────────────────────────────
+function drawSavings () {
+  const now = Date.now();
+  document.getElementById('savingsBars').innerHTML = P.savings.map(s => {
+    if (!s.start || !s.maturity) return `
+      <div style="padding:8px 0">
+        <div class="f"><span class="k">${s.name}</span><span class="v">${won(s.balance)}</span></div>
+      </div>`;
+    const a = new Date(s.start).getTime(), b = new Date(s.maturity).getTime();
+    const p = Math.max(0, Math.min(1, (now - a) / (b - a)));
+    return `
+      <div style="padding:8px 0">
+        <div class="f"><span class="k">${s.name}</span><span class="v">${won(s.balance)}</span></div>
+        <div class="bar"><i style="width:${(p * 100).toFixed(1)}%"></i></div>
+        <div class="barmeta"><span>${s.start}</span><span>${(p * 100).toFixed(1)}%</span><span>${s.maturity}</span></div>
+      </div>`;
+  }).join('');
+}
+
+boot();
+window.addEventListener('resize', () => { if (P) drawTreemap(assets()); });
+</script>
+</body>
+</html>

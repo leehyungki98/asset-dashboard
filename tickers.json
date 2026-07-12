@@ -1,0 +1,5 @@
+{
+  "_comment": "Actions 가 시세를 받아올 티커 목록. 수량·금액 같은 개인정보는 절대 여기 넣지 않는다. 개인 데이터는 노션 embed URL 의 #c= 해시에만 존재한다.",
+  "tickers": ["277630.KS", "PLUG", "BLDP", "PLTR"],
+  "historyDays": 400
+}
