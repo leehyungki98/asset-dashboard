@@ -39,7 +39,7 @@
   .card{background:var(--card);border-radius:12px;padding:16px;margin-bottom:16px}
   .card h3{font-size:13px;color:var(--mut);font-weight:600;margin-bottom:12px}
 
-  #treemap{width:100%;height:340px}
+  #treemap{width:100%;height:360px}
   .chart-box{position:relative;height:280px;width:100%}
   .tm-label{font-size:11px;fill:#fff;font-weight:700;pointer-events:none}
   .tm-sub{font-size:10px;fill:rgba(255,255,255,.8);pointer-events:none}
@@ -47,7 +47,11 @@
 
   .donut-row{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
   .donut-box{width:250px;height:250px;flex:none}
-  .legend{flex:1;min-width:220px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 20px}
+  .legend{flex:1;min-width:200px;display:flex;flex-wrap:wrap;gap:8px 24px;align-content:center}
+  .lg{width:190px}
+  .top-row{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px}
+  .top-row .card{margin-bottom:0}
+  @media(min-width:1150px){.top-row{grid-template-columns:1.35fr 1fr} .donut-row{flex-direction:column;gap:14px} .legend{width:100%}}
   .lg{display:flex;align-items:center;gap:7px;font-size:12px}
   .lg i{width:9px;height:9px;border-radius:2px;flex:none}
   .lg .n{color:var(--mut);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -102,16 +106,18 @@
       <div class="kpi"><div class="k">시가 배당률</div>  <div class="v" id="kDivMkt">–</div></div>
     </div>
 
-    <div class="card">
-      <h3>히트맵</h3>
-      <svg id="treemap"></svg>
-    </div>
+    <div class="top-row">
+      <div class="card">
+        <h3>히트맵</h3>
+        <svg id="treemap"></svg>
+      </div>
 
-    <div class="card">
-      <h3>자산 구성</h3>
-      <div class="donut-row">
-        <div class="donut-box"><canvas id="donut"></canvas></div>
-        <div class="legend" id="legend"></div>
+      <div class="card">
+        <h3>자산 구성</h3>
+        <div class="donut-row">
+          <div class="donut-box"><canvas id="donut"></canvas></div>
+          <div class="legend" id="legend"></div>
+        </div>
       </div>
     </div>
 
