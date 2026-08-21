@@ -1,6 +1,6 @@
 {
-  "updated": "2026-08-22T00:56+09:00",
-  "fx": 1384.95,
+  "updated": "2026-08-22T01:26+09:00",
+  "fx": 1385.43,
   "quotes": {
     "277630.KS": {
       "price": 71870.0,
@@ -17,27 +17,27 @@
       "dividendYield": 0.8278836788646167
     },
     "PLUG": {
-      "price": 2.3301,
+      "price": 2.3299,
       "prevClose": 2.2,
-      "changePct": 5.913636363636354,
+      "changePct": 5.90454545454544,
       "currency": "USD",
       "dividendMonths": [],
       "annualDividend": 0.0,
       "dividendYield": 0.0
     },
     "BLDP": {
-      "price": 2.4232,
+      "price": 2.42,
       "prevClose": 2.37,
-      "changePct": 2.2447257383966246,
+      "changePct": 2.1097046413502074,
       "currency": "USD",
       "dividendMonths": [],
       "annualDividend": 0.0,
       "dividendYield": 0.0
     },
     "PLTR": {
-      "price": 181.68,
+      "price": 181.07,
       "prevClose": 173.96,
-      "changePct": 4.437801793515761,
+      "changePct": 4.0871464704529625,
       "currency": "USD",
       "dividendMonths": [],
       "annualDividend": 0.0,
