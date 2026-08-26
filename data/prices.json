@@ -1,11 +1,11 @@
 {
-  "updated": "2026-08-26T11:17+09:00",
-  "fx": 1381.48,
+  "updated": "2026-08-26T12:30+09:00",
+  "fx": 1386.88,
   "quotes": {
     "277630.KS": {
-      "price": 70340.0,
+      "price": 71430.0,
       "prevClose": 70350.0,
-      "changePct": -0.01421464108031234,
+      "changePct": 1.5351812366737771,
       "currency": "KRW",
       "dividendMonths": [
         1,
@@ -14,7 +14,7 @@
         10
       ],
       "annualDividend": 595.0,
-      "dividendYield": 0.8458913847028718
+      "dividendYield": 0.8329833403331934
     },
     "PLUG": {
       "price": 2.27,
